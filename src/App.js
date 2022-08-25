@@ -1,59 +1,88 @@
 import "./App.css";
+import { useState, useEffect } from "react";
 
-function buttonClick(event) {
-  const inputStr = event.target.id.split("-")[1];
+function printOutput(op1, op2, op, result) {
+  let operatorString = "";
 
-  if (
-    inputStr === "plus" ||
-    inputStr === "minus" ||
-    inputStr === "multiply" ||
-    inputStr === "divide"
-  ) {
-    // if user enters operation
-    if (typeof op1 === "number") {
-      op = inputStr;
-    }
-  } else if (inputStr === "eq") {
-    if (typeof op2 === "number") {
-      switch (op) {
-        case "plus":
-          result = op1 + op2;
-          break;
-        case "minus":
-          result = op1 - op2;
-          break;
-        case "multiply":
-          result = op1 * op2;
-          break;
-        case "divide":
-          result = op1 / op2;
-          break;
-      }
-    }
-  } else {
-    // number
-    if (op) {
-      op2 = (op2 || 0) * 10 + Number(inputStr);
-    } else {
-      op1 = (op1 || 0) * 10 + Number(inputStr);
-    }
+  switch (op) {
+    case "plus":
+      operatorString = "+";
+      break;
+    case "minus":
+      operatorString = "-";
+      break;
+    case "multiplication":
+      operatorString = "*";
+      break;
+    case "division":
+      operatorString = "/";
+      break;
   }
 
-  console.log("op1: " + op1);
-  console.log("op2: " + op2);
-  console.log("op: " + op);
-  console.log("result: " + result);
+  return (
+    result ||
+    String(typeof op1 === "number" ? op1 : "") +
+      operatorString +
+      String(typeof op2 === "number" ? op2 : "") ||
+    "0"
+  );
 }
 
-let op1;
-let op2;
-let op;
-let result;
-
 function App() {
+  const [op1, setOp1] = useState();
+  const [op2, setOp2] = useState();
+  const [op, setOp] = useState();
+  const [result, setResult] = useState();
+  const [isRequestCompleted, setIsRequestCompleted] = useState(false);
+
+  const buttonClick = (event) => {
+    const inputStr = event.target.id.split("-")[1];
+
+    if (
+      inputStr === "plus" ||
+      inputStr === "minus" ||
+      inputStr === "multiplication" ||
+      inputStr === "division"
+    ) {
+      // if user enters operation
+      if (typeof op1 === "number") {
+        setOp(inputStr);
+      }
+    } else {
+      // number
+      if (op) {
+        setOp2((op2 || 0) * 10 + Number(inputStr));
+      } else {
+        setOp1((op1 || 0) * 10 + Number(inputStr));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isRequestCompleted && typeof op2 === "number") {
+      const headers = new Headers();
+      headers.append("Content-Type", "application/json");
+
+      fetch("http://3.12.53.217:3001", {
+        method: "POST",
+        body: JSON.stringify({ op1, op2, op }),
+        headers,
+      })
+        .then((response) => response.text())
+        .then((data) => {
+          if (data.includes("Infinity")) {
+            setResult("Error");
+          } else {
+            setResult(Number(data));
+          }
+          setIsRequestCompleted(false);
+        });
+    }
+  }, [op1, op2, op, isRequestCompleted]);
+
   return (
     <div className="App">
-      <input disabled></input>
+      <div id="display">{printOutput(op1, op2, op, result)}</div>
       <div className="button-line">
         <button id="b-7" onClick={buttonClick}>
           7
@@ -92,7 +121,7 @@ function App() {
         <button id="b-3" onClick={buttonClick}>
           3
         </button>
-        <button id="b-multiply" onClick={buttonClick}>
+        <button id="b-multiplication" onClick={buttonClick}>
           *
         </button>
       </div>
@@ -100,10 +129,29 @@ function App() {
         <button id="b-0" onClick={buttonClick}>
           0
         </button>
-        <button id="b-eq" onClick={buttonClick}>
+        <button
+          id="b-eq"
+          onClick={() => {
+            if (typeof op2 === "number") {
+              setIsRequestCompleted(true);
+            }
+          }}
+        >
           =
         </button>
-        <button id="b-divide" onClick={buttonClick}>
+        <button
+          id="b-clear"
+          onClick={() => {
+            setOp(undefined);
+            setOp1(undefined);
+            setOp2(undefined);
+            setIsRequestCompleted(false);
+            setResult(undefined);
+          }}
+        >
+          C
+        </button>
+        <button id="b-division" onClick={buttonClick}>
           /
         </button>
       </div>
